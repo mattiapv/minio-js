@@ -1242,7 +1242,17 @@ export class Client extends TypedClient {
       // callback on presign failure.
       var url
       var reqOptions = this.getRequestOptions({ method, region, bucketName, objectName, query })
-
+      if (this.public) {
+        reqOptions.host = this.public.host
+        reqOptions.headers.host = this.public.host
+        reqOptions.protocol = this.public.protocol
+        if (
+          (this.public.protocol === 'http:' && this.public.port !== 80) ||
+          (this.public.protocol === 'https:' && this.public.port !== 443)
+        ) {
+          reqOptions.headers.host = `${this.public.host}:${this.public.port}`
+        }
+      }
       this.checkAndRefreshCreds()
       try {
         url = presignSignatureV4(
@@ -1375,7 +1385,15 @@ export class Client extends TypedClient {
       opts.region = region
       opts.bucketName = postPolicy.formData.bucket
       var reqOptions = this.getRequestOptions(opts)
-      var portStr = this.port == 80 || this.port === 443 ? '' : `:${this.port.toString()}`
+      if (this.public) {
+        reqOptions.host = this.public.host
+        reqOptions.headers.host = this.public.host
+        reqOptions.protocol = this.public.protocol
+      }
+      let portStr = this.port == 80 || this.port === 443 ? '' : `:${this.port.toString()}`
+      if (this.public) {
+        portStr = this.public.port == 80 || this.public.port === 443 ? '' : `:${this.public.port.toString()}`
+      }
       var urlStr = `${reqOptions.protocol}//${reqOptions.host}${portStr}${reqOptions.path}`
       cb(null, { postURL: urlStr, formData: postPolicy.formData })
     })

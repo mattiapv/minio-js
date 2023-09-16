@@ -94,6 +94,11 @@ export interface ClientOptions {
   credentialsProvider?: CredentialProvider
   s3AccelerateEndpoint?: string
   transportAgent?: http.Agent
+  public?: {
+    endPoint: string
+    port?: number
+    useSSL?: boolean
+  }
 }
 
 export type RequestOption = Partial<IRequest> & {
@@ -117,6 +122,11 @@ export class TypedClient {
   protected host: string
   protected port: number
   protected protocol: string
+  protected public?: {
+    host: string
+    port: number
+    protocol: string
+  }
   protected accessKey: string
   protected secretKey: string
   protected sessionToken?: string
@@ -188,6 +198,48 @@ export class TypedClient {
       protocol = 'http:'
       port = port || 80
       transportAgent = http.globalAgent
+    }
+
+    let publicHost: string
+    let publicPort: number
+    let publicProtocol: string
+
+    if (params.public) {
+      // Default values if not specified.
+      if (params.public.useSSL === undefined) {
+        params.public.useSSL = true
+      }
+      if (!params.public.port) {
+        params.public.port = 0
+      }
+      // Validate input params.
+      if (!isValidEndpoint(params.public.endPoint)) {
+        throw new errors.InvalidEndpointError(`Invalid endPoint : ${params.public.endPoint}`)
+      }
+      if (!isValidPort(params.public.port)) {
+        throw new errors.InvalidArgumentError(`Invalid port : ${params.public.port}`)
+      }
+      if (!isBoolean(params.public.useSSL)) {
+        throw new errors.InvalidArgumentError(
+          `Invalid useSSL flag type : ${params.public.useSSL}, expected to be of type "boolean"`,
+        )
+      }
+
+      publicHost = params.public.endPoint.toLowerCase()
+      publicPort = params.public.port
+      if (params.public.useSSL) {
+        // Defaults to secure.
+        publicProtocol = 'https:'
+        publicPort = publicPort || 443
+      } else {
+        publicProtocol = 'http:'
+        publicPort = publicPort || 80
+      }
+      this.public = {
+        host: publicHost,
+        port: publicPort,
+        protocol: publicProtocol,
+      }
     }
 
     // if custom transport is set, use it.
